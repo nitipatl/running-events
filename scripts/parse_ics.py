@@ -13,7 +13,14 @@ from icalendar import Calendar
 
 # Secret iCal URL (set as GitHub Secret: CALENDAR_ICS_URL)
 # Secret URL includes attendee/guest data — public URL does not
-ICS_URL = os.environ["CALENDAR_ICS_URL"]
+ICS_URL = os.environ.get("CALENDAR_ICS_URL", "").strip()
+if not ICS_URL:
+    raise SystemExit(
+        "ERROR: CALENDAR_ICS_URL secret is not set.\n"
+        "Go to: Repo → Settings → Secrets → Actions → New secret\n"
+        "Name: CALENDAR_ICS_URL\n"
+        "Value: your secret iCal URL from Google Calendar settings"
+    )
 
 OUM_EMAIL = "my.jintawee@gmail.com"
 
