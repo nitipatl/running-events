@@ -2,7 +2,7 @@ name: Update Running Events
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '0 0-17,22,23 * * *'  # hourly, skip 1am–5am BKK (UTC 18–21)
   push:
     branches: [main]
   workflow_dispatch:
