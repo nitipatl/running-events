@@ -112,9 +112,9 @@ def main():
         if not (range_start <= dt_aware <= range_end):
             continue
 
-        summary     = str(component.get("SUMMARY",     ""))
-        description = str(component.get("DESCRIPTION", ""))
-        location    = str(component.get("LOCATION",    ""))
+        summary     = str(component.get("SUMMARY",     "")).replace("\r\n", " ").replace("\n", " ").strip()
+        description = str(component.get("DESCRIPTION", "")).replace("\r\n", " ").replace("\n", " ").strip()
+        location    = str(component.get("LOCATION",    "")).replace("\r\n", " ").replace("\n", " ").strip()
 
         combined  = f"{summary} {description}"
         distance  = detect_distance(combined)
