@@ -23,12 +23,12 @@ jobs:
       - name: Install dependencies
         run: pip install icalendar python-dateutil
 
-      - name: Parse ICS and generate events.json
+      - name: Bake events into index.html
         run: python scripts/parse_ics.py
 
-      - name: Commit events.json
+      - name: Commit index.html
         run: |
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
-          git add events.json
-          git diff --staged --quiet || (git commit -m "chore: update events.json [skip ci]" && git push)
+          git add index.html
+          git diff --staged --quiet || (git commit -m "chore: update events [skip ci]" && git push)

@@ -1,10 +1,11 @@
 """
 Fetch public Google Calendar ICS, parse running events,
-write events.json for the static website.
+bake data directly into index.html (no runtime fetch needed).
 """
 
 import json
 import re
+import html as html_lib
 from datetime import datetime, timezone, timedelta
 from urllib.request import urlopen
 from icalendar import Calendar
@@ -126,18 +127,33 @@ def main():
     # chronological order
     events.sort(key=lambda e: e["date"])
 
-    output = {
-        "updated": now.isoformat(),
-        "events":  events,
-    }
-
-    with open("events.json", "w", encoding="utf-8") as f:
-        json.dump(output, f, ensure_ascii=False, indent=2)
-
-    total   = len(events)
-    past    = sum(1 for e in events if e["isPast"])
+    total    = len(events)
+    past     = sum(1 for e in events if e["isPast"])
     upcoming = total - past
-    print(f"Done. {total} events written ({upcoming} upcoming, {past} past).")
+
+    # ── bake into index.html ───────────────────────────────────────────────────
+    data_js = json.dumps(
+        {"updated": now.isoformat(), "events": events},
+        ensure_ascii=False,
+        separators=(",", ":"),   # minified
+    )
+
+    with open("index.html", "r", encoding="utf-8") as f:
+        html = f.read()
+
+    # Replace the inline data block between sentinel comments
+    import re as _re
+    html = _re.sub(
+        r"// <!--DATA_START-->.*?// <!--DATA_END-->",
+        f"// <!--DATA_START-->\nconst EVENTS_DATA={data_js};\n// <!--DATA_END-->",
+        html,
+        flags=_re.DOTALL,
+    )
+
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"Done. {total} events baked into index.html ({upcoming} upcoming, {past} past).")
 
 
 if __name__ == "__main__":
