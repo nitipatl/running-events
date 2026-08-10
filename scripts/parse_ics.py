@@ -4,17 +4,16 @@ bake data directly into index.html (no runtime fetch needed).
 """
 
 import json
+import os
 import re
 import html as html_lib
 from datetime import datetime, timezone, timedelta
 from urllib.request import urlopen
 from icalendar import Calendar
 
-ICS_URL = (
-    "https://calendar.google.com/calendar/ical/"
-    "d596912e7acbba43d63939c2748ebdc60aff0222c060e8b31306b05ba44af85f"
-    "%40group.calendar.google.com/public/basic.ics"
-)
+# Secret iCal URL (set as GitHub Secret: CALENDAR_ICS_URL)
+# Secret URL includes attendee/guest data — public URL does not
+ICS_URL = os.environ["CALENDAR_ICS_URL"]
 
 OUM_EMAIL = "my.jintawee@gmail.com"
 

@@ -24,6 +24,8 @@ jobs:
         run: pip install icalendar python-dateutil
 
       - name: Bake events into index.html
+        env:
+          CALENDAR_ICS_URL: ${{ secrets.CALENDAR_ICS_URL }}
         run: python scripts/parse_ics.py
 
       - name: Commit index.html
