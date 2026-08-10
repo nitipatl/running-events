@@ -148,10 +148,12 @@ def main():
         html = f.read()
 
     # Replace the inline data block between sentinel comments
+    # Use lambda to prevent re.sub from interpreting backslashes in data_js
     import re as _re
+    replacement = f"// <!--DATA_START-->\nconst EVENTS_DATA={data_js};\n// <!--DATA_END-->"
     html = _re.sub(
         r"// <!--DATA_START-->.*?// <!--DATA_END-->",
-        f"// <!--DATA_START-->\nconst EVENTS_DATA={data_js};\n// <!--DATA_END-->",
+        lambda _: replacement,
         html,
         flags=_re.DOTALL,
     )
