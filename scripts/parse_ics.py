@@ -8,8 +8,11 @@ import os
 import re
 import html as html_lib
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 from urllib.request import urlopen
 from icalendar import Calendar
+
+BKK = ZoneInfo("Asia/Bangkok")
 
 # Secret iCal URL (set as GitHub Secret: CALENDAR_ICS_URL)
 # Secret URL includes attendee/guest data — public URL does not
@@ -77,7 +80,7 @@ def get_participants(component) -> list[str]:
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(BKK)
     range_start = now - timedelta(days=365)
     range_end   = now + timedelta(days=365)
 
@@ -99,14 +102,14 @@ def main():
         dt = dtstart.dt
         # icalendar returns date or datetime
         if hasattr(dt, "hour"):
-            # datetime — ensure timezone-aware
+            # datetime — convert to BKK timezone
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
-            dt_aware = dt
+            dt_aware = dt.astimezone(BKK)
             time_str = dt_aware.strftime("%H:%M")
         else:
-            # date-only
-            dt_aware = datetime(dt.year, dt.month, dt.day, 0, 0, 0, tzinfo=timezone.utc)
+            # date-only — treat as midnight BKK (race hasn't started yet that day)
+            dt_aware = datetime(dt.year, dt.month, dt.day, 0, 0, 0, tzinfo=BKK)
             time_str = None
 
         if not (range_start <= dt_aware <= range_end):
