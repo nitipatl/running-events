@@ -1,0 +1,34 @@
+name: Update Running Events
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install icalendar python-dateutil
+
+      - name: Parse ICS and generate events.json
+        run: python scripts/parse_ics.py
+
+      - name: Commit events.json
+        run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
+          git add events.json
+          git diff --staged --quiet || (git commit -m "chore: update events.json [skip ci]" && git push)
