@@ -182,7 +182,7 @@ function filterEvents(events){
     if(whoTeuy && whoOum){
       if(!(hasMe && hasOum)) return false;
     } else if(whoTeuy){
-      if(!(hasMe && !hasOum)) return false;
+      if(!hasMe) return false;
     } else if(whoOum){
       if(!hasOum) return false;
     }
