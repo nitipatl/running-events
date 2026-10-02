@@ -6,7 +6,6 @@ bake data directly into index.html (no runtime fetch needed).
 import json
 import os
 import re
-import html as html_lib
 from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from urllib.request import urlopen
@@ -29,36 +28,53 @@ OUM_EMAIL = "my.jintawee@gmail.com"
 
 # ── distance detection ─────────────────────────────────────────────────────────
 
-DISTANCE_PATTERNS = [
-    # 42k / full marathon — check first (before half)
-    ("42k",   re.compile(
-        r'42[\s\.\-]?[12]?\s*k(m)?'
-        r'|full[\s\-]?marathon'
-        r'|marathon(?!.*half)'
-        r'|มาราธอน(?!.*ฮาล์ฟ|.*half)',
-        re.IGNORECASE
-    )),
-    # 21.1k / half marathon
-    ("21.1k", re.compile(
-        r'21[\s\.\-]?1?\s*k(m)?'
-        r'|half[\s\-]?marathon'
-        r'|ฮาล์ฟ'
-        r'|half',
-        re.IGNORECASE
-    )),
-    # 10k
-    ("10k",   re.compile(
-        r'10\s*k(m)?'
-        r'|เทนเค',
-        re.IGNORECASE
-    )),
-]
+_EXPLICIT_KM = re.compile(r"(\d+(?:\.\d+)?)\s*k(?:m)?\b", re.IGNORECASE)
+_HALF = re.compile(r"half[\s\-]?marathon|ฮาล์ฟ|\bhalf\b", re.IGNORECASE)
+_FULL = re.compile(r"full[\s\-]?marathon", re.IGNORECASE)
+_MINI = re.compile(r"mini\s*marathon|มินิ\s*มาราธอน", re.IGNORECASE)
+_MARATHON = re.compile(r"marathon|มาราธอน", re.IGNORECASE)
+_TEN_KE = re.compile(r"เทนเค", re.IGNORECASE)
 
 
-def detect_distance(text: str) -> str | None:
-    for label, pattern in DISTANCE_PATTERNS:
-        if pattern.search(text):
-            return label
+def _map_explicit_kms(nums: list[float]) -> str | None:
+    """Map explicit km figures to site buckets; None = non-standard (do not guess)."""
+    for n in nums:
+        if 41.0 <= n <= 43.0:
+            return "42k"
+    for n in nums:
+        if 20.5 <= n <= 21.5:
+            return "21.1k"
+    for n in nums:
+        if 9.5 <= n <= 10.5:
+            return "10k"
+    return None  # e.g. 11k / 15k / 30k — leave unset rather than mislabel
+
+
+def detect_distance(text: str, title: str | None = None) -> str | None:
+    """Prefer explicit km tokens, then half, then full marathon (not mini)."""
+    # 1) Explicit km on title first (suffix like "- 10k"), then full text
+    for source in ((title, text) if title else (text,)):
+        if not source:
+            continue
+        nums = [float(m.group(1)) for m in _EXPLICIT_KM.finditer(source)]
+        if nums:
+            mapped = _map_explicit_kms(nums)
+            # Had explicit km — never fall through to "marathon" heuristics
+            return mapped
+
+    combined = text or ""
+    # 2) Half marathon / ฮาล์ฟ before bare marathon
+    if _HALF.search(combined):
+        return "21.1k"
+    # 3) Full marathon keywords; mini marathon alone is not 42k
+    if _FULL.search(combined):
+        return "42k"
+    if _MINI.search(combined):
+        return None
+    if _MARATHON.search(combined):
+        return "42k"
+    if _TEN_KE.search(combined):
+        return "10k"
     return None
 
 
@@ -82,7 +98,7 @@ def get_participants(component) -> list[str]:
 def main():
     now = datetime.now(BKK)
     range_start = now - timedelta(days=365)
-    range_end   = now + timedelta(days=365)
+    range_end = now + timedelta(days=365)
 
     print(f"Fetching ICS from Google Calendar …")
     with urlopen(ICS_URL, timeout=30) as resp:
@@ -115,36 +131,36 @@ def main():
         if not (range_start <= dt_aware <= range_end):
             continue
 
-        summary     = str(component.get("SUMMARY",     "")).replace("\r\n", " ").replace("\n", " ").strip()
+        summary = str(component.get("SUMMARY", "")).replace("\r\n", " ").replace("\n", " ").strip()
         description = str(component.get("DESCRIPTION", "")).replace("\r\n", " ").replace("\n", " ").strip()
-        location    = str(component.get("LOCATION",    "")).replace("\r\n", " ").replace("\n", " ").strip()
+        location = str(component.get("LOCATION", "")).replace("\r\n", " ").replace("\n", " ").strip()
 
-        combined  = f"{summary} {description}"
-        distance  = detect_distance(combined)
+        combined = f"{summary} {description}"
+        distance = detect_distance(combined, title=summary)
         participants = get_participants(component)
 
         events.append({
-            "title":        summary,
-            "date":         dt_aware.strftime("%Y-%m-%d"),
-            "time":         time_str,
-            "location":     location,
-            "distance":     distance,
+            "title": summary,
+            "date": dt_aware.strftime("%Y-%m-%d"),
+            "time": time_str,
+            "location": location,
+            "distance": distance,
             "participants": participants,
-            "isPast":       dt_aware < now,
+            "isPast": dt_aware < now,
         })
 
     # chronological order
     events.sort(key=lambda e: e["date"])
 
-    total    = len(events)
-    past     = sum(1 for e in events if e["isPast"])
+    total = len(events)
+    past = sum(1 for e in events if e["isPast"])
     upcoming = total - past
 
     # ── bake into index.html ───────────────────────────────────────────────────
     data_js = json.dumps(
         {"updated": now.isoformat(), "events": events},
         ensure_ascii=False,
-        separators=(",", ":"),   # minified
+        separators=(",", ":"),  # minified
     )
 
     with open("index.html", "r", encoding="utf-8") as f:
@@ -153,9 +169,9 @@ def main():
     # Replace the inline data block between sentinel comments
     # Use lambda to prevent re.sub from interpreting backslashes in data_js
     import re as _re
-    replacement = f"// <!--DATA_START-->\nconst EVENTS_DATA={data_js};\n// <!--DATA_END-->"
+    replacement = f"// \nconst EVENTS_DATA={data_js};\n// "
     html = _re.sub(
-        r"// <!--DATA_START-->.*?// <!--DATA_END-->",
+        r"//.*?// ",
         lambda _: replacement,
         html,
         flags=_re.DOTALL,
