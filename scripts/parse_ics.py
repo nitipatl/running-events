@@ -37,17 +37,27 @@ _TEN_KE = re.compile(r"เทนเค", re.IGNORECASE)
 
 
 def _map_explicit_kms(nums: list[float]) -> str | None:
-    """Map explicit km figures to site buckets; None = non-standard (do not guess)."""
-    for n in nums:
-        if 41.0 <= n <= 43.0:
-            return "42k"
-    for n in nums:
-        if 20.5 <= n <= 21.5:
-            return "21.1k"
-    for n in nums:
-        if 9.5 <= n <= 10.5:
-            return "10k"
-    return None  # e.g. 11k / 15k / 30k — leave unset rather than mislabel
+    """Snap any explicit km figure into filter buckets.
+
+    Buckets: 5k / 10k / 21.1k / 42k
+
+    Range rules (cover short + long):
+    - n < 7.5              → 5k   (e.g. 4.5, 5, 6)
+    - 7.5 <= n <= 15.5     → 10k  (e.g. 10, 11, 11.5, 12, 15)
+    - 15.5 < n <= 21.1     → 21.1k (e.g. 21, 21.1)
+    - 21.1 < n < 42        → 21.1k (round DOWN: 30, 33)
+    - n >= 42              → 42k
+    """
+    n = nums[-1]
+    if n < 7.5:
+        return "5k"
+    if n <= 15.5:
+        return "10k"
+    if n <= 21.1:
+        return "21.1k"
+    if n < 42.0:
+        return "21.1k"  # over half, under full → round down to 21.1
+    return "42k"
 
 
 def detect_distance(text: str, title: str | None = None) -> str | None:
@@ -57,9 +67,17 @@ def detect_distance(text: str, title: str | None = None) -> str | None:
         if not source:
             continue
         nums = [float(m.group(1)) for m in _EXPLICIT_KM.finditer(source)]
+        if not nums:
+            # Trailing bare number: "Bangsaen 21" / "… — 11"
+            # Ignore years / big ints (only plausible race km 1–50)
+            m = re.search(r"(?<![\d.])(\d+(?:\.\d+)?)\s*$", source.strip())
+            if m:
+                v = float(m.group(1))
+                if 1.0 <= v <= 50.0:
+                    nums = [v]
         if nums:
             mapped = _map_explicit_kms(nums)
-            # Had explicit km — never fall through to "marathon" heuristics
+            # Had a numeric distance — never fall through to "marathon" heuristics
             return mapped
 
     combined = text or ""
@@ -166,16 +184,22 @@ def main():
     with open("index.html", "r", encoding="utf-8") as f:
         html = f.read()
 
-    # Replace the inline data block between sentinel comments
-    # Use lambda to prevent re.sub from interpreting backslashes in data_js
+
+    # Replace only the marked data block (unique sentinels — do not match other // comments)
     import re as _re
-    replacement = f"// \nconst EVENTS_DATA={data_js};\n// "
-    html = _re.sub(
-        r"//.*?// ",
+    start, end = "<!--DATA_START-->", "<!--DATA_END-->"
+    replacement = f"{start}
+const EVENTS_DATA={data_js};
+{end}"
+    html, n = _re.subn(
+        _re.escape(start) + r".*?" + _re.escape(end),
         lambda _: replacement,
         html,
+        count=1,
         flags=_re.DOTALL,
     )
+    if n != 1:
+        raise SystemExit(f"ERROR: expected 1 DATA block in index.html, found {n}")
 
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
