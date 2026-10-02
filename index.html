@@ -308,6 +308,103 @@ a.maps:hover{color:var(--orange);border-bottom-color:var(--orange)}
   transition:background .12s,color .12s,box-shadow .12s;
 }
 .more-btn:hover{background:var(--ink);color:var(--bg)}
+
+/* ── next race hero ── */
+.hero{
+  margin:14px 14px 4px;
+  border:2px solid var(--rule);
+  background:var(--bg);
+  box-shadow:4px 4px 0 rgba(0,0,0,.08);
+  position:relative;
+  overflow:hidden;
+}
+.hero::before{
+  content:'';
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.015) 3px,rgba(0,0,0,.015) 4px);
+  pointer-events:none;
+}
+.hero-inner{
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px 14px;
+  padding:16px 14px 14px;
+  align-items:start;
+}
+.hero-kicker{
+  font-family:'Oswald',sans-serif;
+  font-size:.62rem;font-weight:700;
+  letter-spacing:.18em;text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+.hero-count{
+  font-family:'Oswald',sans-serif;
+  font-weight:700;
+  letter-spacing:.01em;
+  line-height:.95;
+  color:var(--orange);
+  text-transform:uppercase;
+  font-size:clamp(1.85rem,8vw,2.6rem);
+  margin-bottom:8px;
+}
+.hero-count.today{color:var(--ink)}
+.hero-title{
+  font-family:'Oswald',sans-serif;
+  font-size:clamp(1.05rem,4.2vw,1.35rem);
+  font-weight:700;
+  letter-spacing:.01em;
+  text-transform:uppercase;
+  line-height:1.15;
+  overflow-wrap:anywhere;word-break:break-word;
+  color:var(--ink);
+}
+.hero-meta{
+  display:flex;flex-wrap:wrap;gap:6px 12px;
+  margin-top:10px;align-items:center;
+}
+.hero-meta .mi{font-size:.78rem}
+.hero-right{
+  display:flex;flex-direction:column;
+  align-items:center;gap:8px;
+  padding-left:10px;
+  border-left:1px solid var(--rule-soft);
+}
+.hero .badge{
+  width:68px;height:68px;
+  transform:rotate(-8deg);
+}
+.hero .badge .b-top{font-size:.48rem;margin-top:8px}
+.hero .badge .b-main{font-size:.95rem}
+.hero .badge::before{font-size:.55rem;top:5px}
+.hero .avs{gap:4px}
+.hero .av{font-size:.58rem;padding:3px 7px}
+.hero-date{
+  text-align:center;
+  font-family:'Oswald',sans-serif;
+}
+.hero-date .dow{
+  font-size:.62rem;letter-spacing:.14em;color:var(--muted);
+}
+.hero-date .day{
+  font-size:2rem;color:var(--orange);margin:1px 0;
+}
+.hero-date .mon{
+  font-size:.62rem;letter-spacing:.1em;color:var(--ink-soft);
+}
+.hero-fallback{
+  font-size:.65rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);
+  margin-top:8px;
+}
+.sec.after-hero{margin-top:18px}
+@media (min-width:480px){
+  .hero-inner{padding:18px 18px 16px;gap:14px 18px}
+  .hero .badge{width:76px;height:76px}
+  .hero .badge .b-main{font-size:1.05rem}
+  .hero-date .day{font-size:2.25rem}
+}
 footer{
   text-align:center;color:var(--muted);font-size:.7rem;
   padding:10px 16px 36px;letter-spacing:.06em;
@@ -494,12 +591,69 @@ function section(title, events, collapsePast){
   }
   return h;
 }
+
+function startOfDay(d){
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+function daysUntil(ev){
+  const today=startOfDay(new Date());
+  const race=startOfDay(new Date(ev.date+'T00:00:00'));
+  return Math.round((race-today)/86400000);
+}
+function countdownLabel(days){
+  if(days<=0) return {text:'วันนี้', cls:'today'};
+  if(days===1) return {text:'พรุ่งนี้', cls:''};
+  return {text:'อีก '+days+' วัน', cls:''};
+}
+function soonestUpcoming(list){
+  const up=list.filter(e=>!e.isPast).slice().sort((a,b)=>{
+    if(a.date!==b.date) return a.date<b.date?-1:1;
+    const ta=a.time||'99:99', tb=b.time||'99:99';
+    return ta<tb?-1:ta>tb?1:0;
+  });
+  return up[0]||null;
+}
+function pickNextRace(filtered, all){
+  const fromFilter=soonestUpcoming(filtered);
+  if(fromFilter) return {ev:fromFilter, fallback:false};
+  const fromAll=soonestUpcoming(all);
+  if(fromAll) return {ev:fromAll, fallback:true};
+  return null;
+}
+function heroCard(ev, fallback){
+  const d=new Date(ev.date+'T00:00:00');
+  const days=daysUntil(ev);
+  const cd=countdownLabel(days);
+  const loc=ev.location?`<a class="mi maps" href="${mapsHref(ev.location).replace(/&/g,'&amp;')}" target="_blank" rel="noopener noreferrer" title="${esc(ev.location)}">📍 ${esc(shortLoc(ev.location))}</a>`:'';
+  const time=ev.time&&ev.time!=='00:00'?`<span class="mi">🕐 ${ev.time}</span>`:'';
+  const fb=fallback?'<div class="hero-fallback">Showing next overall · filters hide upcoming</div>':'';
+  return`<article class="hero" aria-label="Next race">
+    <div class="hero-inner">
+      <div class="hero-main">
+        <div class="hero-kicker">Next Race</div>
+        <div class="hero-count ${cd.cls}">${esc(cd.text)}</div>
+        <div class="hero-title">${esc(ev.title)}</div>
+        <div class="hero-meta">${time}${loc}</div>
+        ${fb}
+      </div>
+      <div class="hero-right">
+        ${badge(ev.distance)}
+        <div class="hero-date"><div class="dow">${DOW[d.getDay()]}</div><div class="day">${d.getDate()}</div><div class="mon">${MON[d.getMonth()]} ${d.getFullYear()}</div></div>
+        <div class="avs">${avs(ev.participants)}</div>
+      </div>
+    </div>
+  </article>`;
+}
 function render(){
   const {updated,events}=EVENTS_DATA;
   const filtered=filterEvents(events);
   const up=filtered.filter(e=>!e.isPast);
   const past=filtered.filter(e=>e.isPast).reverse();
-  document.getElementById('root').innerHTML=section('Upcoming', up, false)+section('Past', past, true);
+  const next=pickNextRace(filtered, events);
+  const hero=next?heroCard(next.ev, next.fallback):'';
+  let list=section('Upcoming', up, false)+section('Past', past, true);
+  if(hero) list=list.replace('class="sec"', 'class="sec after-hero"', 1);
+  document.getElementById('root').innerHTML=hero+list;
   document.getElementById('sub').textContent=`${events.length} events · updated ${rel(updated)}`;
   document.getElementById('ft').textContent='Synced from Google Calendar';
 }
