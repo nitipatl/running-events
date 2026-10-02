@@ -40,6 +40,8 @@ main{max-width:660px;margin:0 auto;padding:16px 14px 60px}
 .b42{background:#7f1d1d22;color:#ef4444;border:1px solid #7f1d1d66}
 .bun{background:#37415122;color:var(--m);border:1px solid #37415166}
 .mi{font-size:.75rem;color:var(--m)}
+a.maps{color:var(--m);text-decoration:none;overflow-wrap:anywhere}
+a.maps:hover{color:var(--a);text-decoration:underline}
 .avs{display:flex;gap:3px;padding-top:2px}
 .av{min-width:28px;height:24px;padding:0 5px;border-radius:99px;font-size:.58rem;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg);white-space:nowrap}
 .av-me{background:#1e40af;color:#93c5fd}
@@ -107,9 +109,57 @@ function avs(ps){
   }).join('');
 }
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function stripLocParens(s){
+  let changed=true;
+  while(changed){
+    changed=false;
+    s=s.replace(/\(([^()]*)\)/g,(full,inner)=>{
+      const t=inner.trim();
+      const outside=s.replace(full,'');
+      const isAddr=/^\d/.test(t)||/\b(rd|road|soi|street|ave|lane|ถนน)\b/i.test(t);
+      const head=t.toLowerCase().slice(0,Math.min(12,t.length));
+      const isDup=t.length>8&&head&&outside.toLowerCase().includes(head);
+      const isLong=t.length>20;
+      if(isAddr||isDup||isLong){changed=true;return '';}
+      if(t.length<=10) return full;
+      changed=true;return '';
+    });
+    s=s.replace(/\s{2,}/g,' ').replace(/\s+,/g,',').replace(/,\s*$/,'').trim();
+  }
+  return s;
+}
+function shortLoc(full){
+  if(!full) return '';
+  let s=stripLocParens(String(full).trim());
+  if(s.length<=40) return s;
+  const parts=s.split(',').map(p=>p.trim()).filter(Boolean);
+  const first=parts[0]||s;
+  const vm=first.match(/^(.{3,40}?)\s+\d{1,5}(?:\/\d+)?\b/);
+  if(vm) return vm[1];
+  const ac=first.match(/\(([A-Za-z0-9]{2,8})\)\s*$/);
+  if(ac&&first.length>20){
+    let city='';
+    if(parts.length>=3) city=parts[parts.length-2].replace(/\s+\d{4,5}$/,'').trim();
+    else if(parts.length===2) city=parts[1].replace(/\s+\d{4,5}$/,'').trim();
+    return city?ac[1]+', '+city:ac[1];
+  }
+  if(first.length<=44&&parts.length>=2) return first;
+  if(parts.length>=2){
+    let city=parts[parts.length-2].replace(/\s+\d{4,5}$/,'').trim();
+    let country=parts[parts.length-1].replace(/\s+\d{4,5}$/,'').trim();
+    if(/\b(district|mueang|amphoe)\b/i.test(city)&&parts.length>=3)
+      city=parts[parts.length-3].replace(/\s+\d{4,5}$/,'').trim();
+    if(city.toLowerCase()===country.toLowerCase()) return city;
+    return city+', '+country;
+  }
+  return s.length>40?s.slice(0,37)+'…':s;
+}
+function mapsHref(loc){
+  return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(loc);
+}
 function card(ev){
   const d=new Date(ev.date+'T00:00:00');
-  const loc=ev.location?`<span class="mi">📍 ${esc(ev.location)}</span>`:'';
+  const loc=ev.location?`<a class="mi maps" href="${mapsHref(ev.location).replace(/&/g,'&amp;')}" target="_blank" rel="noopener noreferrer" title="${esc(ev.location)}">📍 ${esc(shortLoc(ev.location))}</a>`:'';
   const time=ev.time&&ev.time!=='00:00'?`<span class="mi">🕐 ${ev.time}</span>`:'';
   return`<div class="card${ev.isPast?' past':''}">
     <div><div class="day">${d.getDate()}</div><div class="mon">${MON[d.getMonth()]} ${d.getFullYear()}</div></div>
