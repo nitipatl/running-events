@@ -188,9 +188,7 @@ def main():
     # Replace only the marked data block (unique sentinels — do not match other // comments)
     import re as _re
     start, end = "<!--DATA_START-->", "<!--DATA_END-->"
-    replacement = f"{start}
-const EVENTS_DATA={data_js};
-{end}"
+    replacement = f"{start}\nconst EVENTS_DATA={data_js};\n{end}"
     html, n = _re.subn(
         _re.escape(start) + r".*?" + _re.escape(end),
         lambda _: replacement,
