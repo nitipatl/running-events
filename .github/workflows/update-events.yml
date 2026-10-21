@@ -21,16 +21,21 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install icalendar python-dateutil
+        run: pip install icalendar python-dateutil recurring_ical_events
 
       - name: Bake events into index.html
         env:
           CALENDAR_ICS_URL: ${{ secrets.CALENDAR_ICS_URL }}
         run: python scripts/parse_ics.py
 
-      - name: Commit index.html
+      - name: Build training.json (title + date/time only)
+        env:
+          WORKOUT_ICS_URL: ${{ secrets.WORKOUT_ICS_URL }}
+        run: python scripts/build_training.py
+
+      - name: Commit index.html and training.json
         run: |
           git config user.email "actions@github.com"
           git config user.name "GitHub Actions"
-          git add index.html
+          git add index.html training.json
           git diff --staged --quiet || (git commit -m "chore: update events [skip ci]" && git push)
