@@ -1,41 +1,6 @@
 {
- "updated": "2026-11-01T21:04:09+07:00",
+ "updated": "2026-11-02T02:15:54+07:00",
  "items": [
-  {
-   "date": "2026-10-26",
-   "start": "05:30",
-   "title": "🏃🏼 Recovery Easy 30–40 min"
-  },
-  {
-   "date": "2026-10-27",
-   "start": "06:00",
-   "title": "🏃🏼 Easy 40 min"
-  },
-  {
-   "date": "2026-10-28",
-   "start": "06:00",
-   "title": "🏃🏼 Easy 40 min / 🧘 Pilates 1h"
-  },
-  {
-   "date": "2026-10-29",
-   "start": "06:00",
-   "title": "🏃🏼 Easy 45 min"
-  },
-  {
-   "date": "2026-10-30",
-   "start": "06:00",
-   "title": "🏃🏼 Easy 30 min"
-  },
-  {
-   "date": "2026-10-31",
-   "start": "07:00",
-   "title": "🏃🏼 Easy 50 min"
-  },
-  {
-   "date": "2026-11-01",
-   "start": "07:00",
-   "title": "🏃🏼 Easy 40 min"
-  },
   {
    "date": "2026-11-02",
    "start": "06:00",
@@ -65,6 +30,36 @@
    "date": "2026-11-07",
    "start": "06:00",
    "title": "🏃 Long 100 min"
+  },
+  {
+   "date": "2026-11-09",
+   "start": "06:00",
+   "title": "🏃 Easy 50 min"
+  },
+  {
+   "date": "2026-11-10",
+   "start": "06:00",
+   "title": "🏃 Quality 6×3 min"
+  },
+  {
+   "date": "2026-11-11",
+   "start": "06:00",
+   "title": "🏃🏼 Easy 40 min / 🧘 Pilates 1h"
+  },
+  {
+   "date": "2026-11-12",
+   "start": "06:00",
+   "title": "🏃 Easy 45 min"
+  },
+  {
+   "date": "2026-11-13",
+   "start": "06:00",
+   "title": "🏃 Easy 30 min"
+  },
+  {
+   "date": "2026-11-14",
+   "start": "06:00",
+   "title": "🏃 Shakeout 20 min"
   }
  ]
 }
